@@ -1,0 +1,168 @@
+modules:
+  rovo:agent:
+    - key: expertctx-agent
+      name: ExpertCTX
+      description: >
+        Brings an expert's knowledge to your team's own pages. Ask an expert
+        profile to review your plan against your goal, find the gaps and turn
+        the advice into a plan page with owners.
+      prompt: resource:agent-resource;prompt.txt
+      conversationStarters:
+        - Which experts can I ask?
+        - Review this page with the Launch expert
+        - What would the expert check first for our goal?
+        - Turn that review into a plan page with owners
+      actions:
+        - list-experts
+        - get-expert-knowledge
+        - get-team-context
+        - create-plan-page
+
+  action:
+    - key: list-experts
+      name: List expert profiles
+      function: list-experts-fn
+      actionVerb: GET
+      description: >
+        Lists the expert profiles available in ExpertCTX, with each expert's
+        name, profile title, tagline and topics. Use it when the user asks who
+        they can talk to or hasn't said which expert they want.
+      inputs:
+        topic:
+          title: Topic
+          type: string
+          required: false
+          description: Optional topic to filter by, e.g. "launch" or "product design".
+
+    - key: get-expert-knowledge
+      name: Get expert knowledge
+      function: get-expert-knowledge-fn
+      actionVerb: GET
+      description: >
+        Loads one expert profile: bio, voice, frameworks, rules, red flags and
+        examples. Call it before giving any expert's view.
+      inputs:
+        expert:
+          title: Expert
+          type: string
+          required: true
+          description: >
+            Profile id, or the expert's name plus the profile title the user named, e.g.
+            "dylan-jones-launch" or "Dylan Jones Launch". Experts can have several profiles,
+            so include the title whenever the user gave one.
+        question:
+          title: Question
+          type: string
+          required: false
+          description: The user's request in their own words, used to pick the right profile and the most relevant passages from the expert's sources.
+
+    - key: get-team-context
+      name: Get team context
+      function: get-team-context-fn
+      actionVerb: GET
+      description: >
+        Reads the team's context from Confluence: the page the user is on (or
+        the page matching their goal), the team's other recent pages in that
+        space, and the people who wrote and edited them.
+      inputs:
+        pageId:
+          title: Page ID
+          type: string
+          required: false
+          description: Numeric Confluence page ID. Leave empty to use the page the user is viewing.
+        spaceKey:
+          title: Space key
+          type: string
+          required: false
+          description: Confluence space key, if the user named a space.
+        goal:
+          title: Goal
+          type: string
+          required: false
+          description: The goal or plan in the user's words, used to find the right page when none is open.
+
+    - key: create-plan-page
+      name: Create plan page
+      function: create-plan-page-fn
+      actionVerb: CREATE
+      description: >
+        Creates a Confluence page from Markdown. Supports headings, lists,
+        "> " quotes (shown as an info panel) and tasks written as
+        "- [ ] Task @[accountId]", which become Confluence tasks assigned to
+        that person.
+      inputs:
+        title:
+          title: Title
+          type: string
+          required: true
+          description: Page title.
+        content:
+          title: Content
+          type: string
+          required: true
+          description: Page body in Markdown.
+        spaceKey:
+          title: Space key
+          type: string
+          required: false
+          description: Space to create the page in. Defaults to the space the user is in.
+        parentPageId:
+          title: Parent page ID
+          type: string
+          required: false
+          description: Page to file the new page under. Defaults to the page the user is viewing.
+
+  confluence:globalPage:
+    - key: expertctx-experts-page
+      resource: main
+      render: native
+      resolver:
+        function: resolver
+      title: ExpertCTX
+      route: experts
+
+  function:
+    - key: resolver
+      handler: index.handler
+    - key: list-experts-fn
+      handler: index.listExperts
+    - key: get-expert-knowledge-fn
+      handler: index.getExpertKnowledge
+    - key: get-team-context-fn
+      handler: index.getTeamContext
+    - key: create-plan-page-fn
+      handler: index.createPlanPage
+
+remotes:
+  # The ExpertCTX hub, where experts publish their profiles. Keep baseUrl in
+  # step with HUB_URL in src/lib/hub-config.js.
+  - key: expertctx-hub
+    baseUrl: https://expertctx-hub.vercel.app
+    operations:
+      - compute
+
+resources:
+  - key: main
+    path: src/frontend/index.jsx
+  - key: agent-resource
+    path: resource/agent
+
+permissions:
+  scopes:
+    - storage:app
+    - read:confluence-content.all
+    - read:confluence-content.summary
+    - read:confluence-space.summary
+    - search:confluence
+    - read:confluence-user
+    - write:confluence-space
+    - read:space:confluence
+    - read:page:confluence
+    - write:page:confluence
+
+app:
+  runtime:
+    name: nodejs24.x
+    memoryMB: 256
+    architecture: arm64
+  id: ari:cloud:ecosystem::app/e2f7ec8e-7b33-4ade-9583-6f7f11709cc2

@@ -1,0 +1,14 @@
+# Private planning docs
+EXPERTCTX.md
+
+# Dependencies and build output
+node_modules/
+dist/
+.next/
+.vercel/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts

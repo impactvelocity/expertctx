@@ -1,0 +1,16 @@
+{
+  "name": "expertctx",
+  "version": "0.1.0",
+  "description": "ExpertCTX: an expert's knowledge applied to your team's pages, via Rovo",
+  "main": "index.js",
+  "private": true,
+  "license": "MIT",
+  "dependencies": {
+    "@forge/api": "^8.5.0",
+    "@forge/bridge": "^7.3.0",
+    "@forge/kvs": "^2.1.2",
+    "@forge/react": "^12.5.0",
+    "@forge/resolver": "^2.0.2",
+    "react": "^18.3.1"
+  }
+}
