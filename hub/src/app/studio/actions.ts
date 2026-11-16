@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { deleteFile, deletePrefix } from "@/lib/blob";
+import { deletePrefix, readText } from "@/lib/blob";
 import {
   claimExpert,
   createExpert,
@@ -14,16 +14,21 @@ import {
   deleteSource,
   getExpert,
   getExpertByOwner,
+  getSource,
   listProfilesForExpert,
+  listSources,
   newPlaybook,
   updateExpert,
   updateProfile,
+  updateSource,
 } from "@/lib/data";
 import { requireExpert, requireOwnProfile, requireUserId, isAdmin } from "@/lib/auth";
 import { ingestSource } from "@/lib/ingest";
 import { knowledgeFor } from "@/lib/knowledge";
-import { deleteSourceChunks, indexDirectory, removeFromDirectory } from "@/lib/vector";
-import { SECTIONS, type Playbook } from "@/lib/types";
+import { classifyUrl, LINK_KINDS, normalizeUrl, type LinkKind } from "@/lib/links";
+import { fetchLinkMeta } from "@/lib/read/link-meta";
+import { deleteSourceChunks, indexDirectory, removeFromDirectory, searchKnowledge, type Excerpt } from "@/lib/vector";
+import { SECTIONS, type Playbook, type SourceMeta } from "@/lib/types";
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; message: string };
 
@@ -275,83 +280,211 @@ export async function deleteProfileAction(profileId: string): Promise<ActionResu
 }
 
 // ---------------------------------------------------------------------------
-// Sources
+// Sources: everything the expert drops into a profile's brain
 // ---------------------------------------------------------------------------
 
-export async function addTextSourceAction(profileId: string, _: ActionResult | null, form: FormData): Promise<ActionResult> {
+export type LinkPreview = {
+  url: string;
+  kind: LinkKind;
+  label: string;
+  /** What gets read from this kind of link, or null when there is nothing to read. */
+  reads: string | null;
+  meta: SourceMeta;
+  /** Already in this profile. */
+  duplicate: boolean;
+};
+
+/** A source the signed-in expert owns, or throws. */
+async function requireOwnSource(profileId: string, sourceId: string) {
+  await requireOwnProfile(profileId);
+  const source = await getSource(sourceId);
+  if (!source || source.profileId !== profileId) throw new Error("Source not found");
+  return source;
+}
+
+const urlList = z.array(z.string().trim().url()).min(1).max(12);
+
+/** Titles, thumbnails and types for links in the capture box, before anything is saved. */
+export async function previewLinksAction(profileId: string, urls: string[]): Promise<LinkPreview[]> {
+  await requireOwnProfile(profileId);
+  const parsed = urlList.safeParse(urls);
+  if (!parsed.success) return [];
+  const existing = new Set((await listSources(profileId)).map((s) => s.url && normalizeUrl(s.url)));
+  return Promise.all(
+    parsed.data.map(async (raw) => {
+      const url = normalizeUrl(raw);
+      const kind = classifyUrl(url);
+      return {
+        url,
+        kind,
+        label: LINK_KINDS[kind].label,
+        reads: LINK_KINDS[kind].reads,
+        meta: await fetchLinkMeta(url),
+        duplicate: existing.has(url),
+      };
+    }),
+  );
+}
+
+export async function addLinksAction(profileId: string, items: { url: string; mode: "read" | "link" }[]): Promise<ActionResult> {
   try {
     await requireOwnProfile(profileId);
     const input = z
-      .object({ title: text(120).min(2, "Give the source a title"), text: text(200_000).min(40, "Paste at least a paragraph") })
-      .parse({ title: form.get("title"), text: form.get("text") });
+      .array(z.object({ url: z.string().trim().url("Enter a full URL, starting with https://"), mode: z.enum(["read", "link"]) }))
+      .min(1)
+      .max(12)
+      .parse(items);
+    const existing = new Set((await listSources(profileId)).map((s) => s.url && normalizeUrl(s.url)));
+
+    let added = 0;
+    for (const item of input) {
+      const url = normalizeUrl(item.url);
+      if (existing.has(url)) continue;
+      existing.add(url);
+      const kind = classifyUrl(url);
+      // Nothing to read on a profile page, so it is always kept as a link.
+      const mode = LINK_KINDS[kind].reads ? item.mode : "link";
+      // Usually cached by the preview a moment ago, so cards have a title and thumbnail at once.
+      const meta = await fetchLinkMeta(url).catch(() => null);
+      const source = await createSource({
+        profileId,
+        kind: "url",
+        type: mode === "link" ? "link" : LINK_KINDS[kind].type,
+        mode,
+        title: meta?.title || url,
+        url,
+        blobPath: null,
+        text: null,
+        contentType: null,
+        size: null,
+        meta,
+        stage: mode === "link" ? "Saving the link" : kind === "youtube" ? "Fetching the transcript" : "Reading the page",
+      });
+      after(() => ingestSource(source.id));
+      added += 1;
+    }
+    if (!added) return { ok: false, message: input.length > 1 ? "Those are already in this brain." : "That's already in this brain." };
+    revalidatePath(`/studio/profiles/${profileId}`);
+    return { ok: true, message: added > 1 ? `Added ${added} links. Reading them now.` : "Added. Reading it now." };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export async function addNoteAction(profileId: string, note: { title: string; text: string }): Promise<ActionResult> {
+  try {
+    await requireOwnProfile(profileId);
+    const input = z
+      .object({ title: text(120), text: text(200_000).min(20, "Write a sentence or two, or paste a link") })
+      .parse(note);
+    const firstLine = input.text.split("\n").find((line) => line.trim())?.replace(/^#+\s*/, "").trim() ?? "";
     const source = await createSource({
       profileId,
       kind: "text",
-      title: input.title,
+      type: "note",
+      title: input.title || (firstLine.length > 70 ? `${firstLine.slice(0, 67).trimEnd()}…` : firstLine) || "Note",
       url: null,
       blobPath: null,
       text: input.text,
       contentType: "text/markdown",
       size: input.text.length,
+      stage: "Filing passages",
     });
     after(() => ingestSource(source.id));
   } catch (error) {
     return fail(error);
   }
   revalidatePath(`/studio/profiles/${profileId}`);
-  return { ok: true, message: "Added. Indexing now." };
+  return { ok: true, message: "Note added." };
 }
 
-export async function addUrlSourceAction(profileId: string, _: ActionResult | null, form: FormData): Promise<ActionResult> {
+export async function renameSourceAction(profileId: string, sourceId: string, title: string): Promise<ActionResult> {
   try {
-    await requireOwnProfile(profileId);
-    const input = z
-      .object({ url: z.string().trim().url("Enter a full URL, starting with https://"), title: text(120) })
-      .parse({ url: form.get("url"), title: form.get("title") });
-    const source = await createSource({
-      profileId,
-      kind: "url",
-      title: input.title || input.url,
-      url: input.url,
-      blobPath: null,
-      text: null,
-      contentType: null,
-      size: null,
-    });
-    after(() => ingestSource(source.id));
+    const source = await requireOwnSource(profileId, sourceId);
+    const next = text(160).min(1, "Give it a title").parse(title);
+    if (next !== source.title) {
+      await updateSource(sourceId, { title: next });
+      // Passages carry the title for citations, so they are re-filed under the new one.
+      if (source.status === "indexed") after(() => ingestSource(sourceId));
+    }
   } catch (error) {
     return fail(error);
   }
   revalidatePath(`/studio/profiles/${profileId}`);
-  return { ok: true, message: "Added. Reading the page now." };
+  return { ok: true, message: "Renamed" };
 }
 
-export async function reindexSourceAction(profileId: string, sourceId: string): Promise<ActionResult> {
+/** Turn a link that was only kept as a reference into one that is read. */
+export async function readLinkAction(profileId: string, sourceId: string): Promise<ActionResult> {
   try {
-    await requireOwnProfile(profileId);
-    const { updateSource } = await import("@/lib/data");
-    await updateSource(sourceId, { status: "pending", error: null });
+    const source = await requireOwnSource(profileId, sourceId);
+    if (!source.url) return { ok: false, message: "This source has no link to read." };
+    const kind = classifyUrl(source.url);
+    await updateSource(sourceId, {
+      mode: "read",
+      type: LINK_KINDS[kind].type === "link" ? "article" : LINK_KINDS[kind].type,
+      status: "pending",
+      error: null,
+      stage: "Reading the page",
+    });
     after(() => ingestSource(sourceId));
   } catch (error) {
     return fail(error);
   }
   revalidatePath(`/studio/profiles/${profileId}`);
-  return { ok: true, message: "Indexing again" };
+  return { ok: true, message: "Reading it now" };
+}
+
+/** The full text that was read from a source, for the detail view. */
+export async function sourceTextAction(profileId: string, sourceId: string): Promise<{ ok: boolean; text: string }> {
+  try {
+    const source = await requireOwnSource(profileId, sourceId);
+    if (source.text) return { ok: true, text: source.text };
+    if (source.textPath) return { ok: true, text: (await readText(source.textPath)).slice(0, 120_000) };
+    return { ok: true, text: "" };
+  } catch {
+    return { ok: false, text: "" };
+  }
+}
+
+/** Recall: the passages this brain would hand the agent for a question. */
+export async function askBrainAction(profileId: string, question: string): Promise<{ ok: boolean; excerpts: Excerpt[]; message?: string }> {
+  try {
+    await requireOwnProfile(profileId);
+    const query = question.trim().slice(0, 500);
+    if (!query) return { ok: true, excerpts: [] };
+    return { ok: true, excerpts: await searchKnowledge(profileId, query, 6) };
+  } catch (error) {
+    console.error("recall failed", error);
+    return { ok: false, excerpts: [], message: "Recall is unavailable right now." };
+  }
+}
+
+export async function reindexSourceAction(profileId: string, sourceId: string): Promise<ActionResult> {
+  try {
+    await requireOwnSource(profileId, sourceId);
+    await updateSource(sourceId, { status: "pending", error: null, stage: "Reading again" });
+    after(() => ingestSource(sourceId));
+  } catch (error) {
+    return fail(error);
+  }
+  revalidatePath(`/studio/profiles/${profileId}`);
+  return { ok: true, message: "Reading it again" };
 }
 
 export async function deleteSourceAction(profileId: string, sourceId: string): Promise<ActionResult> {
   try {
-    await requireOwnProfile(profileId);
-    const source = await deleteSource(sourceId);
+    await requireOwnSource(profileId, sourceId);
+    await deleteSource(sourceId);
     after(async () => {
       await deleteSourceChunks(sourceId).catch(() => {});
-      if (source?.blobPath) await deleteFile(source.blobPath);
+      await deletePrefix(`sources/${profileId}/${sourceId}/`);
     });
   } catch (error) {
     return fail(error);
   }
   revalidatePath(`/studio/profiles/${profileId}`);
-  return { ok: true, message: "Source deleted" };
+  return { ok: true, message: "Removed from your brain" };
 }
 
 // ---------------------------------------------------------------------------

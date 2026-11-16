@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { BookOpen, FileText, ListChecks, Settings2, Sparkles } from "lucide-react";
+import { BrainCircuit, Lightbulb, ListChecks, Settings2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,64 +9,66 @@ import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { saveKnowledgeAction, saveOverviewAction } from "@/app/studio/actions";
 import { SECTIONS, type Profile, type Source } from "@/lib/types";
+import { BrainView } from "./brain/brain-view";
 import { FieldRow } from "./field-row";
 import { PlaybooksPanel } from "./playbooks-panel";
 import { PreviewPanel } from "./preview-panel";
-import { SourcesPanel } from "./sources-panel";
 import { useToastResult } from "./use-toast-result";
 
-const TABS = [
-  { value: "overview", label: "Overview", icon: Settings2 },
-  { value: "knowledge", label: "Knowledge", icon: BookOpen },
+const VIEWS = [
+  { value: "brain", label: "Brain", icon: BrainCircuit },
+  { value: "core", label: "Principles", icon: Lightbulb },
   { value: "playbooks", label: "Playbooks", icon: ListChecks },
-  { value: "sources", label: "Sources", icon: FileText },
-  { value: "preview", label: "Preview", icon: Sparkles },
+  { value: "ask", label: "Test", icon: Sparkles },
+  { value: "settings", label: "Settings", icon: Settings2 },
 ];
 
+/** Links from before the brain view used the old tab names. */
+const LEGACY: Record<string, string> = { sources: "brain", knowledge: "core", preview: "ask", overview: "settings" };
+
 export function ProfileEditor({ profile, sources, initialTab }: { profile: Profile; sources: Source[]; initialTab: string }) {
-  const [tab, setTab] = useState(TABS.some((t) => t.value === initialTab) ? initialTab : "overview");
+  const start = LEGACY[initialTab] ?? initialTab;
+  const [view, setView] = useState(VIEWS.some((v) => v.value === start) ? start : "brain");
+  const open = (value: string) => {
+    setView(value);
+    window.history.replaceState(null, "", `?tab=${value}`);
+    window.scrollTo({ top: 0 });
+  };
   return (
-    <Tabs
-      value={tab}
-      onValueChange={(value) => {
-        setTab(String(value));
-        window.history.replaceState(null, "", `?tab=${value}`);
-      }}
-      className="gap-6"
-    >
-      <div className="overflow-x-auto">
-        <TabsList variant="underline" className="w-full justify-start">
-          {TABS.map((t) => (
-            <TabsTab key={t.value} value={t.value}>
-              <t.icon aria-hidden />
-              {t.label}
-              {t.value === "sources" && sources.length ? (
-                <span className="rounded-full bg-muted px-1.5 text-muted-foreground text-xs">{sources.length}</span>
-              ) : null}
-              {t.value === "playbooks" && profile.playbooks.length ? (
-                <span className="rounded-full bg-muted px-1.5 text-muted-foreground text-xs">{profile.playbooks.length}</span>
-              ) : null}
+    <Tabs value={view} onValueChange={(value) => open(String(value))} className="gap-6">
+      <div className="overflow-x-auto [scrollbar-width:none]">
+        <TabsList>
+          {VIEWS.map((v) => (
+            <TabsTab key={v.value} value={v.value} className="gap-1.5 px-3.5">
+              <v.icon aria-hidden />
+              {v.label}
+              {v.value === "brain" && sources.length ? <Count>{sources.length}</Count> : null}
+              {v.value === "playbooks" && profile.playbooks.length ? <Count>{profile.playbooks.length}</Count> : null}
             </TabsTab>
           ))}
         </TabsList>
       </div>
-      <TabsPanel value="overview">
-        <OverviewForm profile={profile} />
+      <TabsPanel value="brain">
+        <BrainView profile={profile} sources={sources} onOpenCore={open} />
       </TabsPanel>
-      <TabsPanel value="knowledge">
+      <TabsPanel value="core">
         <KnowledgeForm profile={profile} />
       </TabsPanel>
       <TabsPanel value="playbooks">
         <PlaybooksPanel profile={profile} />
       </TabsPanel>
-      <TabsPanel value="sources">
-        <SourcesPanel profileId={profile.id} sources={sources} />
-      </TabsPanel>
-      <TabsPanel value="preview">
+      <TabsPanel value="ask">
         <PreviewPanel profile={profile} />
+      </TabsPanel>
+      <TabsPanel value="settings">
+        <OverviewForm profile={profile} />
       </TabsPanel>
     </Tabs>
   );
+}
+
+function Count({ children }: { children: React.ReactNode }) {
+  return <span className="rounded-full bg-navy/8 px-1.5 text-muted-foreground text-xs tabular-nums">{children}</span>;
 }
 
 function OverviewForm({ profile }: { profile: Profile }) {
@@ -75,7 +77,7 @@ function OverviewForm({ profile }: { profile: Profile }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Overview</CardTitle>
+        <CardTitle>Settings</CardTitle>
         <CardDescription>How this profile appears in the marketplace, and how the agent should sound.</CardDescription>
       </CardHeader>
       <CardPanel>
@@ -98,7 +100,7 @@ function OverviewForm({ profile }: { profile: Profile }) {
           </div>
           <div className="md:col-span-2">
             <Button type="submit" loading={pending}>
-              Save overview
+              Save settings
             </Button>
           </div>
         </form>
@@ -119,24 +121,22 @@ function KnowledgeForm({ profile }: { profile: Profile }) {
   useToastResult(result);
   return (
     <form action={action} className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="divide-y overflow-hidden rounded-xl border bg-card">
         {SECTIONS.map((section) => (
-          <Card key={section.key}>
-            <CardHeader>
-              <CardTitle>{section.label}</CardTitle>
-              <CardDescription>{section.hint}</CardDescription>
-            </CardHeader>
-            <CardPanel>
-              <Textarea
-                name={section.key}
-                defaultValue={profile[section.key]}
-                placeholder={PLACEHOLDERS[section.key]}
-                className="font-mono text-xs"
-                rows={14}
-                aria-label={section.label}
-              />
-            </CardPanel>
-          </Card>
+          <div key={section.key} className="grid gap-4 p-5 md:grid-cols-[220px_1fr]">
+            <div className="space-y-1">
+              <h3 className="font-semibold">{section.label}</h3>
+              <p className="text-muted-foreground text-sm">{section.hint}</p>
+            </div>
+            <Textarea
+              name={section.key}
+              defaultValue={profile[section.key]}
+              placeholder={PLACEHOLDERS[section.key]}
+              className="font-mono text-xs"
+              rows={8}
+              aria-label={section.label}
+            />
+          </div>
         ))}
       </div>
       <div className="sticky bottom-4 flex items-center justify-between gap-4 rounded-xl border bg-background/90 px-4 py-3 shadow-lg backdrop-blur">

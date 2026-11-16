@@ -70,6 +70,19 @@ export type Profile = {
 
 export type SourceKind = "text" | "url" | "file";
 
+/** What a source is: drives its icon, its filter, and how it gets read. */
+export type SourceType = "article" | "youtube" | "social" | "pdf" | "doc" | "audio" | "video" | "note" | "link";
+
+/** Link-preview details, from iframe.ly or the page's own tags. */
+export type SourceMeta = {
+  title: string;
+  description: string;
+  image: string;
+  icon: string;
+  site: string;
+  author: string;
+};
+
 export type Source = {
   id: string;
   profileId: string;
@@ -86,6 +99,30 @@ export type Source = {
   chunkCount: number;
   error: string | null;
   createdAt: string;
+  // Everything below was added with the brain view; older sources lack it.
+  type?: SourceType;
+  /** "link" keeps a URL as a reference without reading the page behind it. */
+  mode?: "read" | "link";
+  meta?: SourceMeta | null;
+  /** The first lines of what was read, for cards. */
+  excerpt?: string | null;
+  words?: number | null;
+  /** Length of audio or video, in seconds. */
+  duration?: number | null;
+  /** What ingestion is doing right now, while status is pending. */
+  stage?: string | null;
+  /** Upstash Blob path of the full text that was read. */
+  textPath?: string | null;
+  /** A caveat about how it was read, e.g. no transcript so only the description. */
+  note?: string | null;
 };
+
+/** The type of any source, including ones saved before types existed. */
+export function sourceType(source: Pick<Source, "type" | "kind" | "contentType">): SourceType {
+  if (source.type) return source.type;
+  if (source.kind === "text") return "note";
+  if (source.kind === "url") return "article";
+  return source.contentType === "application/pdf" ? "pdf" : "doc";
+}
 
 export type ProfileWithExpert = Profile & { expert: Expert };

@@ -17,6 +17,12 @@
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-hover: var(--brand-hover);
+  --color-ctx-team: var(--ctx-team);
+  --color-ctx-goal: var(--ctx-goal);
+  --color-ctx-expert: var(--ctx-expert);
+  --color-navy: var(--navy);
+  --color-surface-sunken: var(--surface-sunken);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -141,98 +147,114 @@
 }
 
 :root {
-  --brand: oklch(0.55 0.2 275);
-  --brand-foreground: oklch(0.98 0.01 275);
-  --brand-soft: oklch(0.96 0.03 275);
-  --destructive-foreground: var(--color-red-700);
-  --info: var(--color-blue-500);
-  --info-foreground: var(--color-blue-700);
-  --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-700);
-  --warning: var(--color-amber-500);
-  --warning-foreground: var(--color-amber-700);
-  --accent: --alpha(var(--color-black) / 4%);
-  --accent-foreground: var(--color-neutral-800);
+  /* ExpertCTX brand: an indigo-leaning blue, navy-tinted neutrals, and one
+     colour per kind of context (team, goal, expert). */
+  --brand: oklch(0.52 0.2 264);
+  --brand-hover: oklch(0.47 0.2 264);
+  --brand-foreground: oklch(0.99 0.005 264);
+  --brand-soft: oklch(0.96 0.025 264);
+  --ctx-team: oklch(0.62 0.12 192);
+  --ctx-goal: oklch(0.76 0.15 72);
+  --ctx-expert: oklch(0.56 0.21 296);
+  --navy: oklch(0.29 0.055 262);
+  --surface-sunken: oklch(0.975 0.004 264);
+
+  --destructive-foreground: oklch(0.5 0.19 27);
+  --info: oklch(0.6 0.16 255);
+  --info-foreground: oklch(0.47 0.17 260);
+  --success: oklch(0.65 0.15 155);
+  --success-foreground: oklch(0.45 0.12 155);
+  --warning: oklch(0.78 0.15 75);
+  --warning-foreground: oklch(0.5 0.12 60);
+  --accent: oklch(0.29 0.055 262 / 5%);
+  --accent-foreground: var(--navy);
   --background: var(--color-white);
-  --border: --alpha(var(--color-black) / 8%);
+  --border: oklch(0.29 0.055 262 / 12%);
   --card: var(--color-white);
-  --card-foreground: var(--color-neutral-800);
-  --destructive: var(--color-red-500);
-  --foreground: var(--color-neutral-800);
-  --input: --alpha(var(--color-black) / 10%);
-  --muted: --alpha(var(--color-black) / 4%);
-  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-black));
+  --card-foreground: var(--navy);
+  --destructive: oklch(0.58 0.21 27);
+  --foreground: var(--navy);
+  --input: oklch(0.29 0.055 262 / 16%);
+  --muted: oklch(0.29 0.055 262 / 5%);
+  --muted-foreground: oklch(0.47 0.04 262);
   --popover: var(--color-white);
-  --popover-foreground: var(--color-neutral-800);
-  --primary: var(--color-neutral-800);
-  --primary-foreground: var(--color-neutral-50);
-  --ring: var(--color-neutral-400);
-  --secondary: --alpha(var(--color-black) / 4%);
-  --secondary-foreground: var(--color-neutral-800);
-  --chart-1: var(--color-orange-600);
-  --chart-2: var(--color-teal-600);
-  --chart-3: var(--color-cyan-900);
-  --chart-4: var(--color-amber-400);
-  --chart-5: var(--color-amber-500);
+  --popover-foreground: var(--navy);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --ring: oklch(0.6 0.17 264);
+  --secondary: oklch(0.29 0.055 262 / 6%);
+  --secondary-foreground: var(--navy);
+  --chart-1: var(--brand);
+  --chart-2: var(--ctx-team);
+  --chart-3: var(--ctx-expert);
+  --chart-4: var(--ctx-goal);
+  --chart-5: oklch(0.65 0.15 155);
   --code: var(--color-white);
   --code-foreground: var(--foreground);
-  --code-highlight: --alpha(var(--color-black) / 4%);
-  --radius: 0.625rem;
-  --sidebar: var(--color-neutral-50);
-  --sidebar-accent: --alpha(var(--color-black) / 4%);
-  --sidebar-accent-foreground: var(--color-neutral-800);
-  --sidebar-border: --alpha(var(--color-black) / 6%);
-  --sidebar-foreground: color-mix(in srgb, var(--color-neutral-800) 64%, var(--sidebar));
-  --sidebar-primary: var(--color-neutral-800);
-  --sidebar-primary-foreground: var(--color-neutral-50);
-  --sidebar-ring: var(--color-neutral-400);
+  --code-highlight: oklch(0.29 0.055 262 / 5%);
+  --radius: 0.5rem;
+  --sidebar: var(--surface-sunken);
+  --sidebar-accent: oklch(0.29 0.055 262 / 6%);
+  --sidebar-accent-foreground: var(--navy);
+  --sidebar-border: oklch(0.29 0.055 262 / 10%);
+  --sidebar-foreground: oklch(0.4 0.045 262);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {
-  --brand: oklch(0.7 0.16 275);
-  --brand-foreground: oklch(0.2 0.05 275);
-  --brand-soft: oklch(0.28 0.06 275);
-  --destructive-foreground: var(--color-red-400);
-  --info: var(--color-blue-500);
-  --info-foreground: var(--color-blue-400);
-  --success: var(--color-emerald-500);
-  --success-foreground: var(--color-emerald-400);
-  --warning: var(--color-amber-500);
-  --warning-foreground: var(--color-amber-400);
-  --accent: --alpha(var(--color-white) / 4%);
-  --accent-foreground: var(--color-neutral-100);
-  --background: color-mix(in srgb, var(--color-neutral-950) 95%, var(--color-white));
-  --border: --alpha(var(--color-white) / 6%);
-  --card: color-mix(in srgb, var(--background) 98%, var(--color-white));
-  --card-foreground: var(--color-neutral-100);
-  --destructive: color-mix(in srgb, var(--color-red-500) 90%, var(--color-white));
-  --foreground: var(--color-neutral-100);
-  --input: --alpha(var(--color-white) / 8%);
-  --muted: --alpha(var(--color-white) / 4%);
-  --muted-foreground: color-mix(in srgb, var(--color-neutral-500) 90%, var(--color-white));
-  --popover: color-mix(in srgb, var(--background) 98%, var(--color-white));
-  --popover-foreground: var(--color-neutral-100);
-  --primary: var(--color-neutral-100);
-  --primary-foreground: var(--color-neutral-800);
-  --ring: var(--color-neutral-500);
-  --secondary: --alpha(var(--color-white) / 4%);
-  --secondary-foreground: var(--color-neutral-100);
-  --chart-1: var(--color-blue-700);
-  --chart-2: var(--color-emerald-500);
-  --chart-3: var(--color-amber-500);
-  --chart-4: var(--color-purple-500);
-  --chart-5: var(--color-rose-500);
-  --code: color-mix(in srgb, var(--background) 98%, var(--color-white));
+  --brand: oklch(0.68 0.16 264);
+  --brand-hover: oklch(0.74 0.14 264);
+  --brand-foreground: oklch(0.18 0.04 264);
+  --brand-soft: oklch(0.27 0.06 264);
+  --ctx-team: oklch(0.72 0.11 192);
+  --ctx-goal: oklch(0.8 0.14 72);
+  --ctx-expert: oklch(0.7 0.17 296);
+  --navy: oklch(0.93 0.01 262);
+  --surface-sunken: oklch(0.17 0.015 262);
+
+  --destructive-foreground: oklch(0.72 0.16 27);
+  --info: oklch(0.65 0.15 255);
+  --info-foreground: oklch(0.75 0.12 255);
+  --success: oklch(0.68 0.14 155);
+  --success-foreground: oklch(0.76 0.13 155);
+  --warning: oklch(0.78 0.15 75);
+  --warning-foreground: oklch(0.82 0.13 75);
+  --accent: oklch(1 0 0 / 6%);
+  --accent-foreground: var(--navy);
+  --background: oklch(0.2 0.015 262);
+  --border: oklch(1 0 0 / 9%);
+  --card: oklch(0.225 0.016 262);
+  --card-foreground: var(--navy);
+  --destructive: oklch(0.65 0.2 27);
+  --foreground: var(--navy);
+  --input: oklch(1 0 0 / 10%);
+  --muted: oklch(1 0 0 / 5%);
+  --muted-foreground: oklch(0.72 0.025 262);
+  --popover: oklch(0.24 0.016 262);
+  --popover-foreground: var(--navy);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --ring: oklch(0.68 0.16 264);
+  --secondary: oklch(1 0 0 / 6%);
+  --secondary-foreground: var(--navy);
+  --chart-1: var(--brand);
+  --chart-2: var(--ctx-team);
+  --chart-3: var(--ctx-expert);
+  --chart-4: var(--ctx-goal);
+  --chart-5: oklch(0.68 0.14 155);
+  --code: oklch(0.225 0.016 262);
   --code-foreground: var(--foreground);
-  --code-highlight: --alpha(var(--color-white) / 4%);
-  --sidebar: color-mix(in srgb, var(--color-neutral-950) 97%, var(--color-white));
-  --sidebar-accent: --alpha(var(--color-white) / 4%);
-  --sidebar-accent-foreground: var(--color-neutral-100);
-  --sidebar-border: --alpha(var(--color-white) / 5%);
-  --sidebar-foreground: color-mix(in srgb, var(--color-neutral-100) 64%, var(--sidebar));
-  --sidebar-primary: var(--color-neutral-100);
-  --sidebar-primary-foreground: var(--color-neutral-800);
-  --sidebar-ring: var(--color-neutral-400);
+  --code-highlight: oklch(1 0 0 / 5%);
+  --sidebar: var(--surface-sunken);
+  --sidebar-accent: oklch(1 0 0 / 6%);
+  --sidebar-accent-foreground: var(--navy);
+  --sidebar-border: oklch(1 0 0 / 7%);
+  --sidebar-foreground: oklch(0.8 0.02 262);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {
@@ -282,8 +304,25 @@
 .prose-ctx code { font-size: 0.85em; background: var(--muted); padding: 0.1em 0.3em; border-radius: 0.3em; }
 .prose-ctx blockquote { border-left: 2px solid var(--border); padding-left: 0.9em; color: var(--muted-foreground); }
 
+.bg-dots {
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
 .bg-grid {
   background-image: linear-gradient(to right, var(--border) 1px, transparent 1px),
     linear-gradient(to bottom, var(--border) 1px, transparent 1px);
   background-size: 48px 48px;
+}
+
+/* The thin bar under a source that is still being read. */
+@keyframes brain-sweep {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(310%); }
+}
+.brain-sweep {
+  animation: brain-sweep 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .brain-sweep { animation: none; width: 100%; opacity: 0.5; }
 }

@@ -21,6 +21,15 @@ export async function readFile(path: string): Promise<ArrayBuffer> {
   return new Response(record.body as ReadableStream).arrayBuffer();
 }
 
+export async function putText(path: string, text: string) {
+  await getBucket().put(path, text, { contentType: "text/markdown; charset=utf-8" });
+  return path;
+}
+
+export async function readText(path: string): Promise<string> {
+  return new TextDecoder().decode(await readFile(path));
+}
+
 /** A short-lived link for reading a private object (or its public URL). */
 export async function fileUrl(path: string): Promise<string> {
   const b = getBucket();

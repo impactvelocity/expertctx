@@ -138,7 +138,7 @@ export async function listProfilesForExpert(expertId: string): Promise<Profile[]
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-/** Every published profile with its expert, newest first. */
+/** Every published profile with its expert. */
 export async function listPublishedProfiles(): Promise<ProfileWithExpert[]> {
   const ids = await redis.zrange<string[]>("profiles:published", 0, -1, { rev: true });
   if (!ids.length) return [];
@@ -150,9 +150,16 @@ export async function listPublishedProfiles(): Promise<ProfileWithExpert[]> {
     ? await redis.mget<(Expert | null)[]>(...expertIds.map((id) => `expert:${id}`))
     : [];
   const byId = new Map(experts.filter((e): e is Expert => Boolean(e)).map((e) => [e.id, e]));
+  // Verified experts first, then each expert's profiles in the order they made them.
   return profiles
     .filter((p) => byId.has(p.expertId))
-    .map((p) => ({ ...p, expert: byId.get(p.expertId)! }));
+    .map((p) => ({ ...p, expert: byId.get(p.expertId)! }))
+    .sort(
+      (a, b) =>
+        Number(b.expert.verified) - Number(a.expert.verified) ||
+        a.expert.name.localeCompare(b.expert.name) ||
+        a.createdAt.localeCompare(b.createdAt),
+    );
 }
 
 export type ProfileInput = Partial<

@@ -19,15 +19,21 @@ import { createProfileAction } from "@/app/studio/actions";
 import { FieldRow } from "./field-row";
 import { useToastResult } from "./use-toast-result";
 
-export function NewProfileDialog({ variant = "default" }: { variant?: "default" | "outline" }) {
+export function NewProfileDialog({ variant = "default", compact = false }: { variant?: "default" | "outline"; compact?: boolean }) {
   const [result, action, pending] = useActionState(createProfileAction, null);
   useToastResult(result);
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant={variant} />}>
-        <Plus aria-hidden />
-        New profile
-      </DialogTrigger>
+      {compact ? (
+        <DialogTrigger render={<Button variant="ghost" size="icon-xs" aria-label="New profile" />}>
+          <Plus aria-hidden />
+        </DialogTrigger>
+      ) : (
+        <DialogTrigger render={<Button variant={variant} />}>
+          <Plus aria-hidden />
+          New profile
+        </DialogTrigger>
+      )}
       <DialogPopup>
         <form action={action}>
           <DialogHeader>

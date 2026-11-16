@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
-import { Activity, ArrowRight, Eye, FileText, Layers, Pencil } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Activity, ArrowRight, Check, Eye, FileText, Globe2, Layers, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Progress } from "@/components/ui/progress";
+import { Lozenge } from "@/components/brand/lozenge";
+import { LogoMark } from "@/components/site/logo";
 import { ExpertAvatar } from "@/components/site/expert-avatar";
 import { VerifiedBadge } from "@/components/site/verified-badge";
 import { ClaimButton } from "@/components/studio/claim-button";
 import { ExpertForm } from "@/components/studio/expert-form";
 import { NewProfileDialog } from "@/components/studio/new-profile-dialog";
+import { PageHeader } from "@/components/studio/page-header";
 import { isAdmin, requireUserId } from "@/lib/auth";
 import { countSources, getExpertByOwner, getUsage, listExperts, listProfilesForExpert } from "@/lib/data";
 import { frameworkNames } from "@/lib/frameworks";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Studio" };
 
@@ -25,21 +29,24 @@ export default async function StudioPage() {
     const [user, admin] = await Promise.all([currentUser(), isAdmin()]);
     const unclaimed = admin ? (await listExperts()).filter((e) => !e.ownerUserId) : [];
     return (
-      <div className="mx-auto max-w-2xl space-y-8">
-        <div className="space-y-2">
-          <p className="font-medium text-brand text-sm">Welcome to the studio</p>
-          <h1 className="font-display text-4xl">Set up your expert profile</h1>
-          <p className="text-muted-foreground">
-            This is how teams will see you in the marketplace and in Rovo answers. You&apos;ll add your knowledge next.
-          </p>
+      <div className="mx-auto max-w-xl space-y-8 py-6">
+        <div className="space-y-4 text-center">
+          <LogoMark className="mx-auto size-12" />
+          <div className="space-y-2">
+            <h1 className="font-display text-4xl">Set up your expert profile</h1>
+            <p className="text-muted-foreground">
+              This is how teams see you in the marketplace and in Rovo answers. You&apos;ll add your frameworks and
+              playbooks next.
+            </p>
+          </div>
         </div>
         {unclaimed.length ? (
-          <Card className="border-brand/40">
+          <Card className="border-brand/30">
             <CardHeader>
               <CardTitle>Seeded experts waiting for an owner</CardTitle>
-              <CardDescription>You&apos;re an admin, so you can take over one of these instead of starting fresh.</CardDescription>
+              <CardDescription>You&apos;re an admin, so you can take one over instead of starting fresh.</CardDescription>
             </CardHeader>
-            <CardPanel className="space-y-3">
+            <CardPanel className="space-y-2">
               {unclaimed.map((e) => (
                 <div key={e.id} className="flex items-center gap-3 rounded-lg border p-3">
                   <ExpertAvatar expert={e} className="size-9" />
@@ -66,110 +73,201 @@ export default async function StudioPage() {
   const ids = profiles.map((p) => p.id);
   const [usage, sourceCounts] = await Promise.all([getUsage(ids), countSources(ids)]);
   const totalCalls = Object.values(usage).reduce((n, u) => n + u.calls, 0);
+  const totalSites = Object.values(usage).reduce((n, u) => Math.max(n, u.sites), 0);
+  const totalSources = Object.values(sourceCounts).reduce((a, b) => a + b, 0);
   const published = profiles.filter((p) => p.status === "published");
+  const firstName = expert.name.split(" ")[0];
+
+  const steps = [
+    { done: Boolean(expert.bio && expert.headline), label: "Write your headline and bio", href: "/studio/expert" },
+    { done: Boolean(expert.avatarPath), label: "Add a photo", href: "/studio/expert" },
+    { done: profiles.some((p) => frameworkNames(p.frameworks).length > 0), label: "Add your frameworks", href: profiles[0] ? `/studio/profiles/${profiles[0].id}?tab=knowledge` : null },
+    { done: profiles.some((p) => p.playbooks.length > 0), label: "Write a playbook", href: profiles[0] ? `/studio/profiles/${profiles[0].id}?tab=playbooks` : null },
+    { done: totalSources > 0, label: "Add a source: a talk, post or PDF", href: profiles[0] ? `/studio/profiles/${profiles[0].id}?tab=sources` : null },
+    { done: published.length > 0, label: "Publish a profile", href: profiles[0] ? `/studio/profiles/${profiles[0].id}` : null },
+  ];
+  const doneCount = steps.filter((s) => s.done).length;
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-6 md:flex-row md:items-center">
-        <ExpertAvatar expert={expert} className="size-16 text-lg" />
-        <div className="flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-3xl">{expert.name}</h1>
-            <VerifiedBadge verified={expert.verified} kind={expert.kind} />
-          </div>
-          <p className="text-muted-foreground">{expert.headline}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {published.length ? (
-            <Button variant="outline" render={<Link href={`/experts/${expert.slug}`} />}>
-              <Eye aria-hidden />
-              Public page
-            </Button>
-          ) : null}
-          <Button variant="outline" render={<Link href="/studio/expert" />}>
-            <Pencil aria-hidden />
-            Edit details
-          </Button>
-          <NewProfileDialog />
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat icon={<Layers aria-hidden />} label="Profiles" value={`${profiles.length}`} hint={`${published.length} published`} />
-        <Stat
-          icon={<FileText aria-hidden />}
-          label="Sources"
-          value={`${Object.values(sourceCounts).reduce((a, b) => a + b, 0)}`}
-          hint="Searched by meaning"
-        />
-        <Stat icon={<Activity aria-hidden />} label="Agent calls this month" value={`${totalCalls}`} hint="From teams in Rovo" />
-      </div>
-
-      {profiles.length ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {profiles.map((profile) => (
-            <Card key={profile.id} className="group">
-              <Link href={`/studio/profiles/${profile.id}`} className="absolute inset-0 z-10 rounded-2xl" aria-label={`Edit ${profile.title}`} />
-              <CardPanel className="space-y-4 p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <h2 className="font-display text-2xl">{profile.title}</h2>
-                    <p className="line-clamp-2 text-muted-foreground text-sm">{profile.tagline || "No tagline yet"}</p>
-                  </div>
-                  {profile.status === "published" ? <Badge variant="success">Published</Badge> : <Badge variant="outline">Draft</Badge>}
-                </div>
-                <div className="flex flex-wrap gap-x-5 gap-y-1 text-muted-foreground text-xs">
-                  <span>{plural(frameworkNames(profile.frameworks).length, "framework")}</span>
-                  <span>{plural(profile.playbooks.length, "playbook")}</span>
-                  <span>{plural(sourceCounts[profile.id] ?? 0, "source")}</span>
-                  <span>
-                    {plural(usage[profile.id]?.calls ?? 0, "call")} · {plural(usage[profile.id]?.sites ?? 0, "site")} this month
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 font-medium text-sm">
-                  Edit profile
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                </div>
-              </CardPanel>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Empty className="rounded-2xl border border-dashed bg-background py-16">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Layers aria-hidden />
-            </EmptyMedia>
-            <EmptyTitle>Create your first profile</EmptyTitle>
-            <EmptyDescription>
-              A profile is one job you&apos;re great at, like Launch or Product design. Add frameworks, rules, red flags,
-              playbooks and sources to it.
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
+      <PageHeader
+        crumbs={[{ label: "Studio" }]}
+        title={`Welcome back, ${firstName}`}
+        meta={<VerifiedBadge verified={expert.verified} kind={expert.kind} />}
+        description={expert.headline}
+        actions={
+          <>
+            {published.length ? (
+              <Button variant="outline" render={<Link href={`/experts/${expert.slug}`} />}>
+                <Eye aria-hidden />
+                Public page
+              </Button>
+            ) : null}
             <NewProfileDialog />
-          </EmptyContent>
-        </Empty>
-      )}
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat icon={<Layers aria-hidden />} tone="brand" label="Profiles" value={profiles.length} hint={`${published.length} published`} />
+        <Stat icon={<FileText aria-hidden />} tone="team" label="Sources" value={totalSources} hint="Searched by meaning" />
+        <Stat icon={<Activity aria-hidden />} tone="expert" label="Agent calls" value={totalCalls} hint="This month, from Rovo" />
+        <Stat icon={<Globe2 aria-hidden />} tone="goal" label="Sites" value={totalSites} hint="Using you this month" />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">Your profiles</h2>
+            <span className="text-muted-foreground text-xs">One for each job you&apos;re great at</span>
+          </div>
+          {profiles.length ? (
+            <div className="divide-y overflow-hidden rounded-xl border bg-card">
+              {profiles.map((profile) => (
+                <Link
+                  key={profile.id}
+                  href={`/studio/profiles/${profile.id}`}
+                  className="group flex items-center gap-4 px-4 py-3.5 transition-colors hover:bg-accent/60"
+                >
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 font-display text-brand">
+                    {profile.title[0]}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-medium">{profile.title}</p>
+                      {profile.status === "published" ? (
+                        <Lozenge appearance="success">Published</Lozenge>
+                      ) : (
+                        <Lozenge>Draft</Lozenge>
+                      )}
+                    </div>
+                    <p className="truncate text-muted-foreground text-sm">{profile.tagline || "No tagline yet"}</p>
+                  </div>
+                  <dl className="hidden shrink-0 grid-cols-3 gap-6 text-right text-xs sm:grid">
+                    <Metric label="Frameworks" value={frameworkNames(profile.frameworks).length} />
+                    <Metric label="Sources" value={sourceCounts[profile.id] ?? 0} />
+                    <Metric label="Calls" value={usage[profile.id]?.calls ?? 0} />
+                  </dl>
+                  <ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden />
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <Empty className="rounded-xl border border-dashed py-14">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Layers aria-hidden />
+                </EmptyMedia>
+                <EmptyTitle>Create your first profile</EmptyTitle>
+                <EmptyDescription>
+                  A profile is one job you&apos;re great at, like Launch or Product design.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <NewProfileDialog />
+              </EmptyContent>
+            </Empty>
+          )}
+        </section>
+
+        <aside className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Getting started</CardTitle>
+              <CardDescription>
+                {doneCount} of {steps.length} done
+              </CardDescription>
+            </CardHeader>
+            <CardPanel className="space-y-4">
+              <Progress value={(doneCount / steps.length) * 100} />
+              <ol className="space-y-1">
+                {steps.map((step) => {
+                  const body = (
+                    <>
+                      <span
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-full border",
+                          step.done ? "border-success bg-success text-white" : "border-input",
+                        )}
+                      >
+                        {step.done ? <Check className="size-3" aria-hidden /> : null}
+                      </span>
+                      <span className={cn(step.done && "text-muted-foreground line-through decoration-muted-foreground/40")}>
+                        {step.label}
+                      </span>
+                    </>
+                  );
+                  return (
+                    <li key={step.label}>
+                      {step.href && !step.done ? (
+                        <Link href={step.href} className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5 text-sm hover:bg-accent">
+                          {body}
+                        </Link>
+                      ) : (
+                        <div className="flex items-center gap-2.5 px-1.5 py-1.5 text-sm">{body}</div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </CardPanel>
+          </Card>
+          <Card className="bg-brand-soft/50">
+            <CardPanel className="space-y-2 p-5">
+              <p className="font-medium text-sm">Try yourself in Rovo</p>
+              <p className="text-muted-foreground text-sm">
+                Install the app on a Confluence site, open a plan and ask: &ldquo;Review this page with {firstName}&apos;s{" "}
+                {profiles[0]?.title ?? "Launch"} profile.&rdquo;
+              </p>
+              <Button variant="outline" size="sm" render={<Link href="/install" />}>
+                <Pencil aria-hidden />
+                Install steps
+              </Button>
+            </CardPanel>
+          </Card>
+        </aside>
+      </div>
     </div>
   );
 }
 
-function Stat({ icon, label, value, hint }: { icon: React.ReactNode; label: string; value: string; hint: string }) {
+const TONES = {
+  brand: "bg-brand/10 text-brand",
+  team: "bg-ctx-team/12 text-ctx-team",
+  goal: "bg-ctx-goal/18 text-warning-foreground",
+  expert: "bg-ctx-expert/12 text-ctx-expert",
+} as const;
+
+function Stat({
+  icon,
+  tone,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode;
+  tone: keyof typeof TONES;
+  label: string;
+  value: number;
+  hint: string;
+}) {
   return (
-    <Card>
-      <CardPanel className="flex items-center gap-4 p-5">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-brand/10 text-brand [&_svg]:size-5">{icon}</div>
-        <div>
-          <p className="text-muted-foreground text-xs">{label}</p>
-          <p className="font-display text-2xl">{value}</p>
-          <p className="text-muted-foreground text-xs">{hint}</p>
-        </div>
-      </CardPanel>
-    </Card>
+    <div className="rounded-xl border bg-card p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-muted-foreground text-xs">{label}</p>
+        <div className={cn("flex size-7 items-center justify-center rounded-md [&_svg]:size-3.5", TONES[tone])}>{icon}</div>
+      </div>
+      <p className="mt-1 font-display text-3xl">{value}</p>
+      <p className="text-muted-foreground text-xs">{hint}</p>
+    </div>
   );
 }
 
-function plural(n: number, word: string) {
-  return `${n} ${word}${n === 1 ? "" : "s"}`;
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-medium text-sm">{value}</dd>
+    </div>
+  );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Bot, Check, FileText, Globe, KeyRound, Lock, MessageSquare, Server, ShieldCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Lozenge } from "@/components/brand/lozenge";
 import { Button } from "@/components/ui/button";
 import { Card, CardPanel } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -13,46 +13,73 @@ const INSTALL_URL = process.env.NEXT_PUBLIC_FORGE_INSTALL_URL;
 
 export default function InstallPage() {
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-      {/* Listing header, styled like an app marketplace listing */}
-      <div className="flex flex-col gap-6 md:flex-row md:items-center">
-        <div className="flex size-20 items-center justify-center rounded-2xl border bg-card shadow-xs">
-          <LogoMark className="size-12" />
-        </div>
-        <div className="flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-4xl">ExpertCTX for Confluence</h1>
-            <Badge variant="success">Free in beta</Badge>
+    <div>
+      <div className="border-b bg-surface-sunken">
+        <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6">
+          <nav className="mb-6 text-muted-foreground text-sm">
+            <Link href="/" className="hover:text-foreground">
+              Home
+            </Link>{" "}
+            / <span className="text-foreground">Install</span>
+          </nav>
+          <div className="flex flex-col gap-6 pb-8 md:flex-row md:items-center">
+            <div className="flex size-20 items-center justify-center rounded-2xl border bg-card shadow-sm">
+              <LogoMark className="size-12" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h1 className="font-display text-4xl">ExpertCTX for Confluence</h1>
+                <Lozenge appearance="success">Free in beta</Lozenge>
+              </div>
+              <p className="text-muted-foreground">
+                A Rovo agent and expert directory. Experts&apos; frameworks applied to your team&apos;s own pages.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <Lozenge>Confluence Cloud</Lozenge>
+                <Lozenge>Rovo agent</Lozenge>
+                <Lozenge appearance="inprogress">Built on Forge</Lozenge>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              {INSTALL_URL ? (
+                <Button size="xl" render={<a href={INSTALL_URL} target="_blank" rel="noreferrer" />}>
+                  Get it now
+                  <ArrowRight aria-hidden />
+                </Button>
+              ) : (
+                <Button size="xl" disabled>
+                  Install link coming soon
+                </Button>
+              )}
+              <span className="text-center text-muted-foreground text-xs">Needs a site admin</span>
+            </div>
           </div>
-          <p className="text-muted-foreground">
-            Rovo agent and expert directory. Experts&apos; frameworks applied to your team&apos;s own pages.
-          </p>
-          <div className="flex flex-wrap gap-2 text-muted-foreground text-xs">
-            <Badge variant="outline">Confluence Cloud</Badge>
-            <Badge variant="outline">Rovo agent</Badge>
-            <Badge variant="outline">Built on Forge</Badge>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          {INSTALL_URL ? (
-            <Button size="xl" render={<a href={INSTALL_URL} target="_blank" rel="noreferrer" />}>
-              Get it now
-              <ArrowRight aria-hidden />
-            </Button>
-          ) : (
-            <Button size="xl" disabled>
-              Install link coming soon
-            </Button>
-          )}
-          <span className="text-center text-muted-foreground text-xs">Needs a site admin</span>
+          <nav className="-mb-px flex gap-1">
+            {[
+              ["#overview", "Overview"],
+              ["#setup", "Setup"],
+              ["#privacy", "Privacy and security"],
+            ].map(([href, label], i) => (
+              <a
+                key={href}
+                href={href}
+                className={
+                  i === 0
+                    ? "border-brand border-b-2 px-3 py-2.5 font-medium text-brand text-sm"
+                    : "border-transparent border-b-2 px-3 py-2.5 text-muted-foreground text-sm hover:text-foreground"
+                }
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
         </div>
       </div>
 
-      <Separator className="my-10" />
-
+    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
       <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
         <div className="space-y-12">
-          <section className="space-y-4">
+          <section id="overview" className="scroll-mt-24 space-y-4">
             <h2 className="font-display text-2xl">What you get</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <Highlight icon={<Bot aria-hidden />} title="The ExpertCTX agent in Rovo">
@@ -141,13 +168,14 @@ export default function InstallPage() {
         </aside>
       </div>
     </div>
+    </div>
   );
 }
 
 function Highlight({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2 rounded-xl border p-4">
-      <div className="flex items-center gap-2 font-medium text-sm [&_svg]:size-4 [&_svg]:text-brand">
+      <div className="flex items-center gap-2 font-semibold text-sm [&_svg]:size-4 [&_svg]:text-brand">
         {icon}
         {title}
       </div>
@@ -159,7 +187,7 @@ function Highlight({ icon, title, children }: { icon: React.ReactNode; title: st
 function SetupStep({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <li className="flex gap-4 rounded-xl border p-4">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary font-medium text-primary-foreground text-sm">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand font-semibold text-brand-foreground text-sm">
         {n}
       </span>
       <div className="space-y-1">

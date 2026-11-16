@@ -1,42 +1,39 @@
 import Link from "next/link";
 import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import { Logo } from "./logo";
+import { MobileNav } from "./mobile-nav";
+import { NavLinks } from "./nav-links";
 
-const NAV = [
-  { href: "/#how-it-works", label: "How it works" },
-  { href: "/experts", label: "Marketplace" },
-  { href: "/install", label: "Install" },
-  { href: "/#for-experts", label: "For experts" },
-];
-
-export function SiteHeader() {
+export function SiteHeader({ app = false }: { app?: boolean }) {
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
+    <header className="sticky top-0 z-40 h-14 border-b bg-background/90 backdrop-blur-md">
+      <div className={app ? "flex h-full items-center gap-5 px-4 sm:px-5" : "mx-auto flex h-full max-w-7xl items-center gap-5 px-4 sm:px-6"}>
+        <MobileNav />
         <Logo />
-        <nav className="hidden items-center gap-1 md:flex">
-          {NAV.map((item) => (
-            <Button key={item.href} variant="ghost" size="sm" render={<Link href={item.href} />}>
-              {item.label}
-            </Button>
-          ))}
-        </nav>
+        <NavLinks />
         <div className="ml-auto flex items-center gap-2">
+          <Link
+            href="/experts"
+            className="hidden h-8 w-56 items-center gap-2 rounded-md border bg-surface-sunken px-2.5 text-muted-foreground text-sm transition-colors hover:border-input hover:bg-background lg:flex"
+          >
+            <Search className="size-4" aria-hidden />
+            Find an expert
+            <Kbd className="ml-auto">/</Kbd>
+          </Link>
           <Show when="signed-out">
             <SignInButton>
               <Button variant="ghost" size="sm">
                 Sign in
               </Button>
             </SignInButton>
-            <Button size="sm" render={<Link href="/studio" />}>
-              Become an expert
+            <Button size="sm" render={<Link href="/install" />}>
+              Get the app
             </Button>
           </Show>
           <Show when="signed-in">
-            <Button variant="outline" size="sm" render={<Link href="/studio" />}>
-              Studio
-            </Button>
             <UserButton />
           </Show>
         </div>

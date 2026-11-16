@@ -1,14 +1,14 @@
 import { BadgeCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Lozenge } from "@/components/brand/lozenge";
 
 export function VerifiedBadge({ verified, kind }: { verified: boolean; kind?: "expert" | "method-pack" }) {
-  if (kind === "method-pack") return <Badge variant="secondary">Method pack</Badge>;
+  if (kind === "method-pack") return <Lozenge appearance="new">Method pack</Lozenge>;
   return verified ? (
-    <Badge variant="info">
+    <Lozenge appearance="inprogress">
       <BadgeCheck aria-hidden />
       Verified
-    </Badge>
+    </Lozenge>
   ) : (
-    <Badge variant="outline">Unverified</Badge>
+    <Lozenge>Unverified</Lozenge>
   );
 }

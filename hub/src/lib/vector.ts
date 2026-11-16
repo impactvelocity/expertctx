@@ -26,14 +26,15 @@ export type ChunkMetadata = {
   locator: string | null;
 };
 
-export type Chunk = { text: string; locator: string | null };
+/** `url` overrides the source link for one chunk, e.g. a video at the moment the passage starts. */
+export type Chunk = { text: string; locator: string | null; url?: string | null };
 
 export async function upsertChunks(meta: Omit<ChunkMetadata, "locator">, chunks: Chunk[]) {
   for (let i = 0; i < chunks.length; i += 50) {
     const batch = chunks.slice(i, i + 50).map((chunk, j) => ({
       id: `${meta.sourceId}:${i + j}`,
       data: chunk.text,
-      metadata: { ...meta, locator: chunk.locator } satisfies ChunkMetadata,
+      metadata: { ...meta, url: chunk.url ?? meta.url, locator: chunk.locator } satisfies ChunkMetadata,
     }));
     await knowledge.upsert(batch);
   }
@@ -45,6 +46,7 @@ export async function deleteSourceChunks(sourceId: string) {
 
 export type Excerpt = {
   text: string;
+  sourceId: string;
   source: string;
   url: string | null;
   locator: string | null;
@@ -64,6 +66,7 @@ export async function searchKnowledge(profileId: string, question: string, topK 
     .filter((r) => r.data && r.metadata)
     .map((r) => ({
       text: r.data as string,
+      sourceId: r.metadata!.sourceId,
       source: r.metadata!.sourceTitle,
       url: r.metadata!.url,
       locator: r.metadata!.locator,

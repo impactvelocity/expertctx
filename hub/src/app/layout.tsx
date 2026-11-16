@@ -24,14 +24,22 @@ const calSansHeading = localFont({
 const mono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "ExpertCTX: bring an expert into your team's Atlassian", template: "%s · ExpertCTX" },
+  title: { default: "ExpertCTX: the expert in the room, on every page", template: "%s · ExpertCTX" },
   description:
     "Experts publish their frameworks, rules and playbooks once. Teams use them inside Confluence and Rovo, next to their own pages.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      appearance={{
+        variables: {
+          colorPrimary: "oklch(0.52 0.2 264)",
+          borderRadius: "0.5rem",
+          fontFamily: "var(--font-sans)",
+        },
+      }}
+    >
       <html lang="en" className={cn("h-full antialiased", calSans.variable, calSansHeading.variable, mono.variable)}>
         <body className="flex min-h-full flex-col">
           <ToastProvider>{children}</ToastProvider>
